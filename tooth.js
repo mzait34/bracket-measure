@@ -35,6 +35,39 @@
     return h ? [...h, 1] : null;
   }
 
+  const mul3 = (A, B) => {
+    const R = new Array(9).fill(0);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) for (let k = 0; k < 3; k++) R[i * 3 + j] += A[i * 3 + k] * B[k * 3 + j];
+    return R;
+  };
+  function normT(pts) {                       // Hartley normalisation: centroid -> 0, mean distance -> sqrt(2)
+    const n = pts.length; let cx = 0, cy = 0;
+    pts.forEach(p => { cx += p[0] / n; cy += p[1] / n; });
+    let md = 0; pts.forEach(p => { md += Math.hypot(p[0] - cx, p[1] - cy) / n; });
+    const k = md > 1e-12 ? Math.SQRT2 / md : 1;
+    return [k, 0, -k * cx, 0, k, -k * cy, 0, 0, 1];
+  }
+  /** Least-squares homography from N >= 4 correspondences (e.g. all corners of several markers). */
+  function homographyLS(src, dst) {
+    if (src.length < 4 || src.length !== dst.length) return null;
+    const Ts = normT(src), Td = normT(dst);
+    const A = [], b = [];
+    for (let i = 0; i < src.length; i++) {
+      const [x, y] = applyH(Ts, ...src[i]), [u, v] = applyH(Td, ...dst[i]);
+      A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); b.push(u);
+      A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); b.push(v);
+    }
+    const AtA = Array.from({ length: 8 }, () => new Array(8).fill(0)), Atb = new Array(8).fill(0);
+    for (let r = 0; r < A.length; r++) for (let i = 0; i < 8; i++) {
+      Atb[i] += A[r][i] * b[r];
+      for (let j = 0; j < 8; j++) AtA[i][j] += A[r][i] * A[r][j];
+    }
+    const h = solve(AtA, Atb);
+    if (!h) return null;
+    const Tdi = invertH(Td);
+    return Tdi && mul3(Tdi, mul3([...h, 1], Ts));
+  }
+
   function applyH(H, x, y) {
     const w = H[6] * x + H[7] * y + H[8];
     return [(H[0] * x + H[1] * y + H[2]) / w, (H[3] * x + H[4] * y + H[5]) / w];
@@ -85,7 +118,7 @@
     return { point: m.at(v, H[hKey]), mmFromIncisal: v * m.height };
   }
 
-  const api = { homography, applyH, invertH, measure, plan, V, H };
+  const api = { homography, homographyLS, applyH, invertH, measure, plan, V, H };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.Tooth = api;
 })(typeof window !== 'undefined' ? window : globalThis);

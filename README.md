@@ -14,6 +14,12 @@ Print `bracket-grid-cards-A4.pdf` (100%): each 60x40 mm card has the marker (20 
 With "Show guide-card grid overlay" on, the app draws a cyan copy of the printed grid over the live view; if it sits on the printed
 lines, scale and tracking are right (if not, check print scale / marker size).
 
+## Frame card (most accurate)
+Print `bracket-frame-cards-A4.pdf` (100%): 94x62 mm card with 4 markers (ids 11-14, 14 mm) at the corners and a 50x50 mm window with mm ticks.
+Cut the window and hold the card flat against the teeth so the tooth is inside the window: the scale and plane are then fitted
+(least squares) from all visible markers and the tooth is *between* them (interpolation, not extrapolation). Works with 1-4 markers visible.
+The marker-size setting is ignored in this mode. Do not mix cards during one measurement.
+
 ## Host it (iPhone camera needs HTTPS)
 - Easiest: drag the `web/` folder onto https://app.netlify.com/drop
 - Or from a Mac: `cd web && npx serve -l 8080` and, in another terminal, a tunnel such as `npx localtunnel --port 8080`; open the https URL on the iPhone.
