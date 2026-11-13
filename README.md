@@ -9,6 +9,11 @@ marker's plane (mm), so they stay pinned to the tooth while the phone moves. Pur
 3. Start camera. Aim the `+` and press it for: Incisal edge, Gingival margin, Mesial, Distal (tapping the screen also places a point).
 4. Crown height/width and the bracket position (default middle/middle, or a fixed mm height from the incisal edge) are shown in mm.
 
+## Guide cards (recommended)
+Print `bracket-grid-cards-A4.pdf` (100%): each 60x40 mm card has the marker (20 mm) and a 1/5/10 mm grid. Keep Settings > marker size = 20.
+With "Show guide-card grid overlay" on, the app draws a cyan copy of the printed grid over the live view; if it sits on the printed
+lines, scale and tracking are right (if not, check print scale / marker size).
+
 ## Host it (iPhone camera needs HTTPS)
 - Easiest: drag the `web/` folder onto https://app.netlify.com/drop
 - Or from a Mac: `cd web && npx serve -l 8080` and, in another terminal, a tunnel such as `npx localtunnel --port 8080`; open the https URL on the iPhone.

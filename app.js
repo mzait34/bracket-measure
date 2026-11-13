@@ -26,6 +26,8 @@
     $(id).value = store.get('bm_' + id, $(id).value);
     $(id).addEventListener('change', () => { store.set('bm_' + id, $(id).value); compute(); });
   });
+  $('cardGuide').checked = store.get('bm_cardGuide', '1') === '1';
+  $('cardGuide').addEventListener('change', () => store.set('bm_cardGuide', $('cardGuide').checked ? '1' : '0'));
   const markerMm = () => Math.max(1, parseFloat($('markerMm').value) || 20);
 
   // ---------- camera ----------
@@ -187,6 +189,19 @@
         ctx.beginPath(); q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath();
         ctx.fillStyle = 'rgba(40,200,255,.55)'; ctx.fill(); ctx.strokeStyle = '#7fe3ff'; ctx.lineWidth = 2; ctx.stroke();
       }
+    }
+    // Virtual copy of the printed guide-card grid (see test/make_card_sheet.py): 25x25 mm, its bottom-left corner sits at
+    // (27, 20) mm in marker coordinates (marker black square = 0..20 mm, y pointing down). If it lies on the printed grid, scale is right.
+    if (H && markerOk() && $('cardGuide').checked && Math.abs(markerMm() - 20) < 0.05) {
+      const gx = 27, gy0 = -5, G = 25;
+      ctx.save(); ctx.lineCap = 'butt';
+      for (let i = 0; i <= G; i += 5) {
+        ctx.strokeStyle = i % 10 === 0 ? 'rgba(0,220,255,.95)' : 'rgba(0,220,255,.55)'; ctx.lineWidth = i % 10 === 0 ? 1.6 : 1;
+        const v1 = planeToScreen([gx + i, gy0]), v2 = planeToScreen([gx + i, gy0 + G]);
+        const h1 = planeToScreen([gx, gy0 + G - i]), h2 = planeToScreen([gx + G, gy0 + G - i]);
+        line(v1, v2, ctx.strokeStyle, ctx.lineWidth); line(h1, h2, ctx.strokeStyle, ctx.lineWidth);
+      }
+      ctx.restore();
     }
     // reticle at screen center
     const cx = S.cw / 2, cy = S.ch / 2, ok = markerOk();
