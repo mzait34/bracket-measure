@@ -154,6 +154,7 @@
   function updateUI() {
     const step = nextStep();
     $('hint').textContent = !S.running ? $('hint').textContent
+      : !markerOk() && step ? 'Show the printed marker card to the camera first'
       : step ? 'Aim the + at the ' + LABEL[step] + ' and press +' : 'Done – bracket planned';
     $('plus').disabled = !step || !markerOk();
     const r = $('result');
