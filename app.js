@@ -22,7 +22,7 @@
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
-  ['markerMm', 'vKey', 'hKey', 'fixedMm'].forEach(id => {
+  ['markerMm', 'markerId', 'vKey', 'hKey', 'fixedMm'].forEach(id => {
     $(id).value = store.get('bm_' + id, $(id).value);
     $(id).addEventListener('change', () => { store.set('bm_' + id, $(id).value); compute(); });
   });
@@ -75,10 +75,12 @@
     dctx.drawImage(video, 0, 0, dw, dh);
     const img = dctx.getImageData(0, 0, dw, dh);
     const found = detector.detect(img);
-    if (!found.length) return;
-    found.sort((a, b) => a.hammingDistance - b.hammingDistance);
+    const id = parseInt($('markerId').value, 10);
+    const ok = found.filter(m => m.id === id);           // ignore look-alike false positives
+    if (!ok.length) return;
+    ok.sort((a, b) => a.hammingDistance - b.hammingDistance);
     const k = S.vw / dw;
-    const c = found[0].corners.map(p => [p.x * k, p.y * k]);
+    const c = ok[0].corners.map(p => [p.x * k, p.y * k]);
     if (corners) {   // smooth only tiny (jitter-sized) motion; real motion passes through with no lag
       let d = 0;
       for (let i = 0; i < 4; i++) d += Math.hypot(c[i][0] - corners[i][0], c[i][1] - corners[i][1]) / 4;
