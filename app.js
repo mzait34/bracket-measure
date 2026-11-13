@@ -70,6 +70,33 @@
   const screenToPlane = (x, y) => { const v = toVideo(x, y); return applyH(Hinv, v[0], v[1]); };
   const markerOk = () => !!H && performance.now() - lastSeen < 400;
 
+  // ---------- fixed-distance mode (tripod): scale saved once from a marker, then no marker needed ----------
+  // Saved as px-per-mm divided by the video width, so it survives a different capture resolution.
+  let savedNorm = parseFloat(store.get('bm_scaleNorm', '')) || 0;
+  let liveScale = 0, liveAt = 0;                         // px/mm currently measured from a visible marker
+  const fixedMode = () => $('scaleMode').value === 'fixed' && savedNorm > 0;
+  const savedScale = () => savedNorm * S.vw;             // px per mm in current video pixels
+  function scaleOf(h, kind) {                            // local px/mm of homography h around the working area
+    const P = kind === 'frame' ? [47, 31] : [markerMm() / 2, markerMm() / 2];
+    const f = (dx, dy) => applyH(h, P[0] + dx, P[1] + dy);
+    const d1 = Math.hypot(...[0, 1].map(i => f(5, 0)[i] - f(-5, 0)[i])), d2 = Math.hypot(...[0, 1].map(i => f(0, 5)[i] - f(0, -5)[i]));
+    return (d1 + d2) / 20;
+  }
+  function useFixedScale() {                             // plane = video pixels / s  (camera assumed perpendicular, on a tripod)
+    const s = savedScale();
+    H = [s, 0, 0, 0, s, 0, 0, 0, 1]; Hinv = [1 / s, 0, 0, 0, 1 / s, 0, 0, 0, 1]; lastSeen = performance.now(); mode = 'fixed';
+  }
+  function refreshScaleInfo(msg) {
+    $('scaleInfo').textContent = msg || (savedNorm > 0 ? 'Saved scale: ' + (savedNorm * 1000).toFixed(2) + ' px/mm per 1000 px of image width' : 'No scale saved yet.');
+  }
+  function saveScale() {
+    const fresh = performance.now() - liveAt < 400;
+    const cur = fixedMode() ? (fresh ? liveScale : 0) : (markerOk() && mode !== 'fixed' ? scaleOf(H, mode) : 0);
+    if (!cur) return refreshScaleInfo('Show the marker card to the camera, then press Save again.');
+    savedNorm = cur / S.vw; store.set('bm_scaleNorm', String(savedNorm));
+    refreshScaleInfo('Saved at ' + (cur).toFixed(1) + ' px/mm. Now choose "Fixed scale" mode.');
+  }
+
   // ---------- marker tracking ----------
   // Frame card (bracket-frame-cards-A4.pdf): 4 markers (ids 11-14, black square 14 mm) at the corners of a 94x62 mm card,
   // given as black-square top-left corners in card mm (y down). The tooth sits in the window between them.
@@ -102,7 +129,7 @@
     const singleId = parseInt($('markerId').value, 10);
     const hasLandmarks = STEPS.some(s => L[s]);
     let want = frameIds.length ? 'frame' : (best[singleId] ? 'single' : null);
-    if (hasLandmarks) want = mode;                       // landmarks are stored in one plane: never switch mid-measurement
+    if (hasLandmarks && !fixedMode()) want = mode;       // landmarks are stored in one plane: never switch mid-measurement
     if (!want) return;
     const src = [], dst = [], used = [];
     const add = (id, plane) => {
@@ -118,7 +145,10 @@
     }
     if (!used.length) return;
     const h = homographyLS(src, dst), hi = h && invertH(h);
-    if (h && hi) { H = h; Hinv = hi; mode = want; outlines = used; lastSeen = performance.now(); }
+    if (!h || !hi) return;
+    outlines = used;
+    if (fixedMode()) { liveScale = scaleOf(h, want); liveAt = performance.now(); return; }   // only used for the distance indicator
+    H = h; Hinv = hi; mode = want; lastSeen = performance.now();
   }
 
   // ---------- landmarks ----------
@@ -163,7 +193,8 @@
       r.hidden = false;
       r.textContent = 'Crown height: ' + result.m.height.toFixed(1) + ' mm\n' +
         'Crown width: ' + result.m.width.toFixed(1) + ' mm\n' +
-        'Bracket: ' + hk + '\n= ' + result.mmFromIncisal.toFixed(1) + ' mm from incisal edge';
+        'Bracket: ' + hk + '\n= ' + result.mmFromIncisal.toFixed(1) + ' mm from incisal edge' +
+        (fixedMode() ? '\n(fixed scale: keep the camera perpendicular and at the saved distance)' : '');
     } else r.hidden = true;
   }
   function fixedLabel() {
@@ -238,6 +269,13 @@
       }
       ctx.restore();
     }
+    if (fixedMode() && H) {          // 1:1 guide: a box of known real size at the saved scale; match it with a real object of that size
+      const g = Math.max(1, parseFloat($('guideMm').value) || 20), c = screenToPlane(S.cw / 2, S.ch * 0.3);
+      const q = [[-g / 2, -g / 2], [g / 2, -g / 2], [g / 2, g / 2], [-g / 2, g / 2]].map(([dx, dy]) => planeToScreen([c[0] + dx, c[1] + dy]));
+      ctx.save(); ctx.setLineDash([8, 6]); ctx.strokeStyle = '#ffd24d'; ctx.lineWidth = 2;
+      ctx.beginPath(); q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.stroke(); ctx.restore();
+      text(g + ' mm guide (1:1)', q[0][0], q[0][1] - 8, '#ffd24d');
+    }
     // reticle at screen center
     const cx = S.cw / 2, cy = S.ch / 2, ok = markerOk();
     ctx.strokeStyle = ok ? '#fff' : 'rgba(255,255,255,.4)'; ctx.lineWidth = 3;
@@ -247,20 +285,35 @@
 
   // ---------- main loop ----------
   let n = 0;
+  function fixedStatus() {
+    if (performance.now() - liveAt > 400) return 'Fixed scale · no marker in view';
+    const r = liveScale / savedScale(), pct = Math.abs(r - 1) * 100;
+    return pct < 3 ? 'Fixed scale · ✓ distance matches (' + pct.toFixed(1) + '%)'
+      : 'Fixed scale · move ' + (r > 1 ? 'FARTHER' : 'CLOSER') + ' (' + pct.toFixed(0) + '% off)';
+  }
   function loop() {
     if (S.running) requestAnimationFrame(loop);
     if (video.readyState < 2 || !video.videoWidth) return;
     layout();
     detect();
+    if (fixedMode()) useFixedScale();
     draw();
     const ok = markerOk();
     const st = $('status');
-    st.textContent = !ok ? 'Marker: not found' : mode === 'frame' ? 'Frame card: ' + outlines.length + '/4 markers' : 'Marker: OK (' + markerMm() + ' mm)';
+    st.textContent = fixedMode() ? fixedStatus() : !ok ? 'Marker: not found' : mode === 'frame' ? 'Frame card: ' + outlines.length + '/4 markers' : 'Marker: OK (' + markerMm() + ' mm)';
     st.className = 'chip ' + (ok ? 'ok' : 'bad');
+    if (fixedMode() ? performance.now() - liveAt > 400 : !ok) outlines = [];
     if ((n++ & 7) === 0) updateUI();
     const hook = window.__bracket && window.__bracket.onFrame;     // test hook: runs on the exact frame just processed
     if (hook) hook({ det, k: S.vw / det.width, H, markerOk: ok });
   }
+
+  $('scaleMode').value = store.get('bm_scaleMode', 'auto');
+  $('guideMm').value = store.get('bm_guideMm', '20');
+  $('scaleMode').addEventListener('change', () => { store.set('bm_scaleMode', $('scaleMode').value); clearAll(); H = null; Hinv = null; outlines = []; });
+  $('guideMm').addEventListener('change', () => store.set('bm_guideMm', $('guideMm').value));
+  $('saveScale').addEventListener('click', saveScale);
+  refreshScaleInfo();
 
   // ---------- input ----------
   $('plus').addEventListener('click', () => placeAtScreen(S.cw / 2, S.ch / 2));
@@ -270,7 +323,7 @@
 
   // Test / debugging hook
   window.__bracket = {
-    L, placeAtPlane, placeAtScreen, undo, clearAll, markerOk,
+    L, placeAtPlane, placeAtScreen, undo, clearAll, markerOk, setSavedNorm: v => { savedNorm = v; },
     result: () => result, planeToScreen: p => planeToScreen(p), toScreen, toVideo,
     state: () => ({ outlines, mode, H, running: S.running })
   };

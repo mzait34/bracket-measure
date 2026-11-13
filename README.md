@@ -20,6 +20,15 @@ Cut the window and hold the card flat against the teeth so the tooth is inside t
 (least squares) from all visible markers and the tooth is *between* them (interpolation, not extrapolation). Works with 1-4 markers visible.
 The marker-size setting is ignored in this mode. Do not mix cards during one measurement.
 
+## Fixed-distance mode (tripod, no marker each time)
+1. Mount the phone on a tripod at the working distance, show a marker/frame card, open Settings and press **Save current scale**.
+2. Settings > Scale mode > **Fixed scale**. The scale is saved on the phone; the marker is no longer needed.
+3. A dashed **1:1 guide box** (default 20 mm, adjustable) is drawn at the saved scale: hold a real object of that size
+   at the tooth's plane and move the phone until it matches the box.
+4. Whenever a marker is visible the status line says **move CLOSER / FARTHER / distance matches** (compared with the saved scale) - use it to return to the calibrated distance.
+Assumes the camera stays perpendicular to the tooth and at the saved distance (points do not follow if the phone moves).
+Tests: `node web/test/run_fixed_e2e.js <static.y4m> [nomarker]`.
+
 ## Host it (iPhone camera needs HTTPS)
 - Easiest: drag the `web/` folder onto https://app.netlify.com/drop
 - Or from a Mac: `cd web && npx serve -l 8080` and, in another terminal, a tunnel such as `npx localtunnel --port 8080`; open the https URL on the iPhone.
