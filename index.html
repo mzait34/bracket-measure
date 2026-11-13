@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<title>Bracket Measure</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="view"></canvas>
+<video id="cam" playsinline muted autoplay></video>
+
+<div id="top">
+  <div id="hint">Print the marker, put it next to the tooth, then start.</div>
+  <div id="status" class="chip">Marker: –</div>
+</div>
+
+<div id="start">
+  <h1>Bracket Measure</h1>
+  <p>Live tooth measurement with a printed marker of known size.</p>
+  <button id="startBtn" class="primary">Start camera</button>
+  <button id="demoBtn">Try demo (no camera)</button>
+  <p class="small"><a href="marker.html" target="_blank">Open printable marker</a></p>
+  <p id="err" class="small err"></p>
+</div>
+
+<div id="result" hidden></div>
+
+<details id="settings">
+  <summary>Settings</summary>
+  <label>Marker size (black square, mm)
+    <input id="markerMm" type="number" inputmode="decimal" min="3" max="200" step="0.1" value="20"></label>
+  <label>Vertical
+    <select id="vKey"><option value="incisal">Incisal</option><option value="middle" selected>Middle</option><option value="gingival">Gingival</option></select></label>
+  <label>Horizontal
+    <select id="hKey"><option value="mesial">Mesial</option><option value="middle" selected>Middle</option><option value="distal">Distal</option></select></label>
+  <label>Fixed height from incisal (mm, 0 = off)
+    <input id="fixedMm" type="number" inputmode="decimal" min="0" max="20" step="0.1" value="0"></label>
+</details>
+
+<div id="bar">
+  <button id="undo" class="round" aria-label="Undo">↶</button>
+  <button id="plus" class="round big" aria-label="Place point">+</button>
+  <button id="clear" class="round" aria-label="Clear">🗑</button>
+</div>
+
+<script src="vendor/cv.js"></script>
+<script src="vendor/aruco.js"></script>
+<script src="tooth.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

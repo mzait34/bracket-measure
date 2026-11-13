@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Printable marker</title>
+<style>
+  body{font:16px -apple-system,system-ui,sans-serif;margin:16px;background:#fff;color:#000}
+  #m{background:#fff;display:block;margin:12px 0}
+  label{display:block;margin:8px 0}
+  @page{margin:10mm}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<div class="no-print">
+  <h2>Printable marker</h2>
+  <ol>
+    <li>Print this page at <b>100% scale</b> (no "fit to page").</li>
+    <li>With a ruler, measure the <b>black square</b> side and type it in the app under Settings.</li>
+    <li>Tape the marker flat, in the same plane as the tooth's facial surface.</li>
+  </ol>
+  <label>Black square size to print (mm): <input id="size" type="number" value="20" min="10" max="100"></label>
+  <label>Marker id (0-249): <input id="mid" type="number" value="7" min="0" max="249"></label>
+  <button onclick="window.print()">Print</button>
+</div>
+<div id="m"></div>
+<script src="vendor/cv.js"></script>
+<script src="vendor/aruco.js"></script>
+<script>
+  function render() {
+    const dic = new AR.Dictionary('ARUCO_MIP_36h12');
+    const mm = +document.getElementById('size').value || 20;
+    const svg = dic.generateSVG(+document.getElementById('mid').value || 0);
+    // SVG viewBox = 10 units, the black square = 8 units, so the full drawing is mm*10/8 wide.
+    const w = mm * 10 / 8;
+    document.getElementById('m').innerHTML = svg.replace('<svg ', '<svg width="' + w + 'mm" height="' + w + 'mm" ');
+  }
+  document.getElementById('size').oninput = document.getElementById('mid').oninput = render;
+  render();
+</script>
+</body>
+</html>
