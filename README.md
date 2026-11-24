@@ -10,6 +10,14 @@ marker's plane (mm), so they stay pinned to the tooth while the phone moves. Pur
    lift to place). Press on an existing point and drag to correct it. Aiming the centre circle and pressing `+` also works.
 4. Crown height/width and the bracket position (default middle/middle, or a fixed mm height from the incisal edge) are shown in mm.
 
+## AUTO (detect the edges)
+Press **AUTO**, then touch the middle of the crown once. The app grows the crown region by colour (CIE Lab) from that point,
+stops at the pink gingiva and at dark gaps/mouth, fills highlights, extends over a grey-bluish translucent incisal edge, and
+places Incisal, Gingival, Mesial and Distal (set which side the midline is on in Settings). The outline is drawn; drag any point to fix it.
+No machine learning; tested only on synthetic images (`node web/test/autodetect.test.js`, `python3 web/test/make_auto_scene.py`
++ `node web/test/run_auto_e2e.js`). Known limits: lower teeth touching the incisal edge merge into the crown (the app then
+warns), strong shadows, stains, restorations, brackets already bonded, saliva glare. Always check the points.
+
 ## Guide cards (recommended)
 Print `bracket-grid-cards-A4.pdf` (100%): each 60x40 mm card has the marker (20 mm) and a 1/5/10 mm grid. Keep Settings > marker size = 20.
 With "Show guide-card grid overlay" on, the app draws a cyan copy of the printed grid over the live view; if it sits on the printed

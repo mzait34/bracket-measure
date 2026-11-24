@@ -41,6 +41,8 @@
   <div id="scaleInfo" class="small"></div>
   <label>1:1 guide box size (mm)
     <input id="guideMm" type="number" inputmode="decimal" min="1" max="100" step="0.5" value="20"></label>
+  <label>Midline (mesial side) on screen, for AUTO
+    <select id="midline"><option value="left" selected>Left of the tooth</option><option value="right">Right of the tooth</option></select></label>
   <label>Vertical
     <select id="vKey"><option value="incisal">Incisal</option><option value="middle" selected>Middle</option><option value="gingival">Gingival</option></select></label>
   <label>Horizontal
@@ -52,12 +54,14 @@
 <div id="bar">
   <button id="undo" class="round" aria-label="Undo">↶</button>
   <button id="plus" class="round big" aria-label="Place point">+</button>
+  <button id="auto" class="round" aria-label="Auto detect tooth edges">AUTO</button>
   <button id="clear" class="round" aria-label="Clear">🗑</button>
 </div>
 
 <script src="vendor/cv.js"></script>
 <script src="vendor/aruco.js"></script>
 <script src="tooth.js"></script>
+<script src="autodetect.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

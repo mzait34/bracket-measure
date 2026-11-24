@@ -13,7 +13,7 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font:16px -apple-syste
 a{color:#7db7ff}
 button{font:inherit;color:#fff;border:0;cursor:pointer}
 .primary{background:#2f7bff;padding:14px 28px;border-radius:14px;font-weight:700;font-size:18px}
-#bar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;align-items:center;gap:36px;padding:12px 16px calc(env(safe-area-inset-bottom) + 18px)}
+#bar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;align-items:center;gap:22px;padding:12px 16px calc(env(safe-area-inset-bottom) + 18px)}
 .round{width:58px;height:58px;border-radius:50%;background:rgba(60,60,64,.85);font-size:24px}
 .round.big{width:78px;height:78px;font-size:46px;line-height:1;background:rgba(80,80,86,.9)}
 .round:disabled{opacity:.35}
@@ -24,3 +24,5 @@ button{font:inherit;color:#fff;border:0;cursor:pointer}
 #settings input,#settings select{display:block;width:100%;margin-top:3px;font:inherit;padding:6px;border-radius:8px;border:0}
 [hidden]{display:none!important}
 #demoBtn{background:#333;padding:10px 20px;border-radius:12px}
+#auto{font-size:14px;font-weight:800;letter-spacing:.04em}
+#auto.armed{background:#2f7bff}

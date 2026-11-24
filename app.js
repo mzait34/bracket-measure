@@ -22,7 +22,7 @@
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
-  ['markerMm', 'markerId', 'vKey', 'hKey', 'fixedMm'].forEach(id => {
+  ['markerMm', 'markerId', 'midline', 'vKey', 'hKey', 'fixedMm'].forEach(id => {
     $(id).value = store.get('bm_' + id, $(id).value);
     $(id).addEventListener('change', () => { store.set('bm_' + id, $(id).value); compute(); });
   });
@@ -169,7 +169,7 @@
     for (let i = STEPS.length - 1; i >= 0; i--) if (L[STEPS[i]]) { delete L[STEPS[i]]; break; }
     compute(); updateUI();
   }
-  function clearAll() { STEPS.forEach(s => delete L[s]); compute(); updateUI(); }
+  function clearAll() { STEPS.forEach(s => delete L[s]); autoOutline = null; compute(); updateUI(); }
 
   function compute() {
     result = null;
@@ -183,7 +183,9 @@
 
   function updateUI() {
     const step = nextStep();
-    $('hint').textContent = !S.running ? $('hint').textContent
+    if (performance.now() < noteUntil) { /* keep the AUTO message visible for a moment */ }
+    else $('hint').textContent = !S.running ? $('hint').textContent
+      : autoArm ? 'AUTO: touch the middle of the tooth'
       : !markerOk() && step ? 'Show the printed marker card to the camera first'
       : step ? 'Touch the ' + LABEL[step] + ' (drag to adjust, lift to place)' : 'Done – drag any point to adjust it';
     $('plus').disabled = !step || !markerOk();
@@ -276,6 +278,10 @@
       ctx.beginPath(); q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.stroke(); ctx.restore();
       text(g + ' mm guide (1:1)', q[0][0], q[0][1] - 8, '#ffd24d');
     }
+    if (H && autoOutline) {
+      ctx.fillStyle = 'rgba(0,220,255,.8)';
+      autoOutline.forEach(p => { const q = planeToScreen(p); ctx.fillRect(q[0] - 1, q[1] - 1, 2, 2); });
+    }
     if (pointer) {                                   // magnifier above the finger (below it near the top edge)
       const R = 62, Z = 2.5, [fx, fy] = pointer, cx = Math.min(Math.max(fx, R + 4), S.cw - R - 4);
       const cy = fy - R - 50 > R + 4 ? fy - R - 50 : fy + R + 50;
@@ -331,6 +337,30 @@
   $('plus').addEventListener('click', () => placeAtScreen(S.cw / 2, S.ch / 2));
   $('undo').addEventListener('click', undo);
   $('clear').addEventListener('click', clearAll);
+  // ---------- AUTO: detect the crown outline around a touched point ----------
+  let autoArm = false, autoOutline = null;
+  function setAutoArm(on) { autoArm = on; $('auto').classList.toggle('armed', on); updateUI(); }
+  function runAuto(p) {
+    setAutoArm(false);
+    if (!markerOk()) return note('Show the marker card first, then press AUTO again.');
+    const k = S.vw / det.width, v = toVideo(p[0], p[1]);
+    const img = dctx.getImageData(0, 0, det.width, det.height);           // the exact frame the current scale came from
+    const r = ToothAuto.detect(img, [v[0] / k, v[1] / k]);
+    if (!r.ok) return note('AUTO: ' + r.reason + '. Place the points by touch.');
+    const toPlane = q => { const w = applyH(Hinv, q[0] * k, q[1] * k); return [w[0], w[1]]; };
+    const midLeft = $('midline').value === 'left';
+    STEPS.forEach(s => delete L[s]);
+    L.incisal = toPlane(r.incisal); L.gingival = toPlane(r.gingival);
+    L.mesial = toPlane(midLeft ? r.left : r.right); L.distal = toPlane(midLeft ? r.right : r.left);
+    autoOutline = r.boundary.map(toPlane);
+    compute(); updateUI();
+    note(r.suspicious ? 'AUTO: crown looks too long - lower teeth may be merged. Check the INCISAL point (drag it) or ask the patient to open slightly.'
+      : 'AUTO done' + (r.gumVisible ? '' : ' (gum edge not seen clearly)') + ' - check the 4 points, drag any to adjust.');
+  }
+  let noteUntil = 0;
+  function note(t) { $('hint').textContent = t; noteUntil = performance.now() + 5000; }
+  $('auto').addEventListener('click', () => setAutoArm(!autoArm));
+
   // Touch: press, drag (a magnifier shows what is under the finger), lift to place the next point.
   // Pressing on an existing point drags that point instead, so any landmark can be corrected.
   let drag = null, pointer = null;
@@ -348,7 +378,7 @@
     e.preventDefault();
     try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
     pointer = [e.clientX, e.clientY];
-    const hit = nearestLandmark(pointer, 30);
+    const hit = autoArm ? null : nearestLandmark(pointer, 30);
     drag = hit ? { kind: 'move', step: hit } : { kind: 'new' };
     if (hit) moveTo(hit, pointer);
   });
@@ -359,14 +389,15 @@
   });
   canvas.addEventListener('pointerup', () => {
     if (!drag) return;
-    if (drag.kind === 'new' && nextStep()) placeAtScreen(pointer[0], pointer[1]);
+    if (drag.kind === 'new' && autoArm) runAuto(pointer);
+    else if (drag.kind === 'new' && nextStep()) placeAtScreen(pointer[0], pointer[1]);
     drag = null; pointer = null; compute(); updateUI();
   });
   canvas.addEventListener('pointercancel', () => { drag = null; pointer = null; });
 
   // Test / debugging hook
   window.__bracket = {
-    L, placeAtPlane, placeAtScreen, undo, clearAll, markerOk, setSavedNorm: v => { savedNorm = v; },
+    L, placeAtPlane, placeAtScreen, runAuto, autoOutline: () => autoOutline, undo, clearAll, markerOk, setSavedNorm: v => { savedNorm = v; },
     result: () => result, planeToScreen: p => planeToScreen(p), toScreen, toVideo,
     state: () => ({ outlines, mode, H, running: S.running })
   };
