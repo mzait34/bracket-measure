@@ -26,7 +26,7 @@
     $(id).value = store.get('bm_' + id, $(id).value);
     $(id).addEventListener('change', () => { store.set('bm_' + id, $(id).value); compute(); });
   });
-  $('cardGuide').checked = store.get('bm_cardGuide', '1') === '1';
+  $('cardGuide').checked = store.get('bm_cardGuide', '0') === '1';   // off by default: only meaningful with the printed guide card
   $('cardGuide').addEventListener('change', () => store.set('bm_cardGuide', $('cardGuide').checked ? '1' : '0'));
   const markerMm = () => Math.max(1, parseFloat($('markerMm').value) || 20);
 
