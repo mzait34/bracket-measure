@@ -185,7 +185,7 @@
     const step = nextStep();
     $('hint').textContent = !S.running ? $('hint').textContent
       : !markerOk() && step ? 'Show the printed marker card to the camera first'
-      : step ? 'Aim the + at the ' + LABEL[step] + ' and press +' : 'Done – bracket planned';
+      : step ? 'Touch the ' + LABEL[step] + ' (drag to adjust, lift to place)' : 'Done – drag any point to adjust it';
     $('plus').disabled = !step || !markerOk();
     const r = $('result');
     if (result) {
@@ -276,6 +276,18 @@
       ctx.beginPath(); q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.stroke(); ctx.restore();
       text(g + ' mm guide (1:1)', q[0][0], q[0][1] - 8, '#ffd24d');
     }
+    if (pointer) {                                   // magnifier above the finger (below it near the top edge)
+      const R = 62, Z = 2.5, [fx, fy] = pointer, cx = Math.min(Math.max(fx, R + 4), S.cw - R - 4);
+      const cy = fy - R - 50 > R + 4 ? fy - R - 50 : fy + R + 50;
+      const sw = (2 * R / Z) * S.dpr, sx = fx * S.dpr - sw / 2, sy = fy * S.dpr - sw / 2;
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.clip();
+      ctx.fillStyle = '#000'; ctx.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+      ctx.drawImage(canvas, sx, sy, sw, sw, cx - R, cy - R, 2 * R, 2 * R);
+      ctx.strokeStyle = '#ffd24d'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(cx - 14, cy); ctx.lineTo(cx + 14, cy); ctx.moveTo(cx, cy - 14); ctx.lineTo(cx, cy + 14); ctx.stroke();
+      ctx.restore();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+    }
     // reticle at screen center
     const cx = S.cw / 2, cy = S.ch / 2, ok = markerOk();
     ctx.strokeStyle = ok ? '#fff' : 'rgba(255,255,255,.4)'; ctx.lineWidth = 3;
@@ -319,7 +331,38 @@
   $('plus').addEventListener('click', () => placeAtScreen(S.cw / 2, S.ch / 2));
   $('undo').addEventListener('click', undo);
   $('clear').addEventListener('click', clearAll);
-  canvas.addEventListener('click', e => placeAtScreen(e.clientX, e.clientY));   // tap anywhere also works
+  // Touch: press, drag (a magnifier shows what is under the finger), lift to place the next point.
+  // Pressing on an existing point drags that point instead, so any landmark can be corrected.
+  let drag = null, pointer = null;
+  function nearestLandmark(p, r) {
+    let best = null, bd = r;
+    STEPS.forEach(s => { if (!L[s]) return; const q = planeToScreen(L[s]), d = Math.hypot(q[0] - p[0], q[1] - p[1]); if (d < bd) { bd = d; best = s; } });
+    return best;
+  }
+  function moveTo(step, p) {
+    if (!markerOk()) return;
+    const q = screenToPlane(p[0], p[1]); L[step] = [q[0], q[1]]; compute();
+  }
+  canvas.addEventListener('pointerdown', e => {
+    if (!markerOk()) return;
+    e.preventDefault();
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    pointer = [e.clientX, e.clientY];
+    const hit = nearestLandmark(pointer, 30);
+    drag = hit ? { kind: 'move', step: hit } : { kind: 'new' };
+    if (hit) moveTo(hit, pointer);
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!drag) return;
+    pointer = [e.clientX, e.clientY];
+    if (drag.kind === 'move') moveTo(drag.step, pointer);
+  });
+  canvas.addEventListener('pointerup', () => {
+    if (!drag) return;
+    if (drag.kind === 'new' && nextStep()) placeAtScreen(pointer[0], pointer[1]);
+    drag = null; pointer = null; compute(); updateUI();
+  });
+  canvas.addEventListener('pointercancel', () => { drag = null; pointer = null; });
 
   // Test / debugging hook
   window.__bracket = {

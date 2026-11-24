@@ -6,7 +6,8 @@ marker's plane (mm), so they stay pinned to the tooth while the phone moves. Pur
 ## Use
 1. Open `marker.html`, print at **100%**, measure the black square with a ruler, enter that value in Settings.
 2. Tape the marker flat next to the tooth, in the same plane as the facial surface. Phone ~15-25 cm away, roughly perpendicular.
-3. Start camera. Aim the `+` and press it for: Incisal edge, Gingival margin, Mesial, Distal (tapping the screen also places a point).
+3. Start camera. Touch the screen at: Incisal edge, Gingival margin, Mesial, Distal (a magnifier shows what is under your finger;
+   lift to place). Press on an existing point and drag to correct it. Aiming the centre circle and pressing `+` also works.
 4. Crown height/width and the bracket position (default middle/middle, or a fixed mm height from the incisal edge) are shown in mm.
 
 ## Guide cards (recommended)
@@ -27,7 +28,7 @@ The marker-size setting is ignored in this mode. Do not mix cards during one mea
    at the tooth's plane and move the phone until it matches the box.
 4. Whenever a marker is visible the status line says **move CLOSER / FARTHER / distance matches** (compared with the saved scale) - use it to return to the calibrated distance.
 Assumes the camera stays perpendicular to the tooth and at the saved distance (points do not follow if the phone moves).
-Tests: `node web/test/run_fixed_e2e.js <static.y4m> [nomarker]`.
+Tests: `node web/test/run_fixed_e2e.js <static.y4m> [nomarker]`, `node web/test/run_drag_e2e.js <static.y4m>` (drag to correct a point).
 
 ## Host it (iPhone camera needs HTTPS)
 - Easiest: drag the `web/` folder onto https://app.netlify.com/drop
